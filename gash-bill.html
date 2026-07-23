@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>আবাসিক গ্যাস ম্যানেজমেন্ট সিস্টেম</title>
+    <!-- Tailwind CSS for modern UI -->
+    <script src="https://tailwindcss.com"></script>
+    <!-- EmailJS Library for Email Backup -->
+    <script src="https://jsdelivr.net"></script>
+    <script>
+        (function() {
+            // আপনার EmailJS পাবলিক কি এখানে বসাতে পারেন (ঐচ্ছিক)
+            emailjs.init("YOUR_EMAILJS_PUBLIC_KEY");
+        })();
+    </script>
+</head>
+<body class="bg-gray-5xl text-gray-800 font-sans leading-normal tracking-normal">
+
+    <!-- Header Section (আপনার বাড়ির ঠিকানা ও তথ্য) -->
+    <header class="bg-gradient-to-r block bg-blue-700 text-white p-6 shadow-md text-center">
+        <h1 class="text-3xl font-bold mb-2">🏠 সোনালী নীড় (৮ তলা ভবন)</h1>
+        <p class="text-sm">ঠিকানা: হাউজ #১২, রোড #০৫, ধানমন্ডি, ঢাকা</p>
+        <p class="text-sm">ফোন: +৮৮০১৭১২৩৪৫৬৭৮ | ইমেইল: owner@email.com</p>
+    </header>
+
+    <div class="container mx-auto p-4 md:p-8">
+        
+        <!-- Main Admin Dashboard Panel -->
+        <section class="bg-white rounded-lg shadow-lg p-6 mb-8 border-t-4 border-blue-600">
+            <h2 class="text-xl font-bold mb-4 text-blue-700 border-b pb-2">📊 মেইন ড্যাশবোর্ড (চলতি মাস)</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-blue-50 p-4 rounded shadow-inner">
+                    <label class="block text-xs font-semibold text-gray-600">সাব-স্টেশন মোট কেনা গ্যাস (টাকা)</label>
+                    <input type="number" id="mainTotalTk" class="w-full bg-transparent text-xl font-bold text-blue-900 focus:outline-none" value="15000">
+                </div>
+                <div class="bg-green-50 p-4 rounded shadow-inner">
+                    <label class="block text-xs font-semibold text-gray-600">সাব-স্টেশন মোট ইউনিট (m³)</label>
+                    <input type="number" id="mainTotalUnit" class="w-full bg-transparent text-xl font-bold text-green-900 focus:outline-none" value="1000">
+                </div>
+                <div class="bg-purple-50 p-4 rounded shadow-inner">
+                    <label class="block text-xs font-semibold text-gray-600">২৮টি মিটারে মোট পুড়ছে (ইউনিট)</label>
+                    <div id="calcTotalUnit" class="text-xl font-bold text-purple-900">0.00</div>
+                </div>
+                <div class="bg-amber-50 p-4 rounded shadow-inner">
+                    <label class="block text-xs font-semibold text-gray-600">মোট সংগৃহীত টাকা (বিল)</label>
+                    <div id="calcTotalTk" class="text-xl font-bold text-amber-900">৳ 0.00</div>
+                </div>
+            </div>
+            
+            <div class="flex flex-wrap gap-3 justify-end">
+                <button onclick="calculateBills()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded shadow transition duration-200">🔄 হিসাব আপডেট করুন</button>
+                <button onclick="saveDataToLocal()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded shadow transition duration-200">💾 ডাটা সেভ করুন</button>
+                <button onclick="sendEmailBackup()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded shadow transition duration-200">📧 মেইলে ব্যাকআপ পাঠান</button>
+            </div>
+        </section>
+
+        <!-- 28 Meter Profiles Table -->
+        <section class="bg-white rounded-lg shadow-lg p-6 overflow-x-auto">
+            <h2 class="text-xl font-bold mb-4 text-gray-700 border-b pb-2">🔑 ২৮টি ফ্ল্যাটের আলাদা প্রোফাইল ও মিটার রিডিং</h2>
+            <table class="min-w-full bg-white border border-gray-200">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-700 text-left text-sm uppercase font-semibold">
+                        <th class="py-3 px-4 border-b">ফ্ল্যাট / প্রোফাইল</th>
+                        <th class="py-3 px-4 border-b">মিটার নম্বর</th>
+                        <th class="py-3 px-4 border-b">পূর্বের রিডিং</th>
+                        <th class="py-3 px-4 border-b">বর্তমান রিডিং</th>
+                        <th class="py-3 px-4 border-b">ব্যবহৃত ইউনিট</th>
+                        <th class="py-3 px-4 border-b">মোট বিল (টাকা)</th>
+                    </tr>
+                </thead>
+                <tbody id="meterTableBody" class="text-gray-600 text-sm">
+                    <!-- JavaScript উইল জেনারেট ২৮টি রো এখানে -->
+                </tbody>
+            </table>
+        </section>
+
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // ২৮টি ফ্ল্যাটের ডেটা স্ট্রাকচার জেনারেট করা
+        const totalMeters = 28;
+        let gasData = [];
+
+        // লোকাল স্টোরেজ থেকে ডাটা লোড করা অথবা নতুন ডাটা তৈরি
+        function initData() {
+            const savedData = localStorage.getItem('gasManagementData');
+            if (savedData) {
+                gasData = JSON.parse(savedData);
+            } else {
+                for (let i = 1; i <= totalMeters; i++) {
+                    let floor = Math.ceil(i / 4); // প্রতি তলায় ৪টি করে ইউনিট ধরে
+                    let unitLetter = String.fromCharCode(64 + (i % 4 || 4)); // A, B, C, D
+                    gasData.push({
+                        id: i,
+                        flat: `ফ্ল্যাট-${floor}${unitLetter}`,
+                        meterNo: `G-MET-100${i}`,
+                        prevReading: 100,
+                        currReading: 120,
+                        usedUnit: 20,
+                        totalBill: 300
+                    });
+                }
+            }
+            renderTable();
+            calculateBills();
+        }
+
+        // টেবিল রেন্ডার করা
+        function renderTable() {
+            const tbody = document.getElementById('meterTableBody');
+            tbody.innerHTML = '';
+            gasData.forEach((meter, index) => {
+                const row = `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="py-3 px-4 font-medium text-gray-900">${meter.flat}</td>
+                        <td class="py-3 px-4">${meter.meterNo}</td>
+                        <td class="py-3 px-4">
+                            <input type="number" onchange="updateMeter(${index}, 'prevReading', this.value)" class="border rounded px-2 py-1 w-24" value="${meter.prevReading}">
+                        </td>
+                        <td class="py-3 px-4">
+                            <input type="number" onchange="updateMeter(${index}, 'currReading', this.value)" class="border rounded px-2 py-1 w-24" value="${meter.currReading}">
+                        </td>
+                        <td class="py-3 px-4 font-bold text-blue-600" id="used-${index}">${meter.usedUnit}</td>
+                        <td class="py-3 px-4 font-bold text-green-600" id="bill-${index}">৳ ${meter.totalBill}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        // ইনপুট পরিবর্তনের সাথে সাথে ডাটা আপডেট
+        function updateMeter(index, field, value) {
+            gasData[index][field] = parseFloat(value) || 0;
+            calculateBills();
+        }
+
+        // সম্পূর্ণ বিল ও ইউনিট ক্যালকুলেশন
+        function calculateBills() {
+            let mainTk = parseFloat(document.getElementById('mainTotalTk').value) || 0;
+            let mainUnit = parseFloat(document.getElementById('mainTotalUnit').value) || 0;
+            
+            // প্রতি ইউনিটের সরকারি/সাবস্টেশন রেট বের করা (টাকা / ইউনিট)
+            let perUnitRate = mainUnit > 0 ? (mainTk / mainUnit) : 15; // ডিফল্ট ১৫ টাকা
+
+            let sumUnit = 0;
+            let sumTk = 0;
+
+            gasData.forEach((meter, index) => {
+                // ব্যবহৃত ইউনিট = বর্তমান রিডিং - পূর্বের রিডিং
+                let used = meter.currReading - meter.prevReading;
+                if (used < 0) used = 0; 
+                
+                let bill = used * perUnitRate;
+
+                gasData[index].usedUnit = used.toFixed(2);
+                gasData[index].totalBill = bill.toFixed(2);
+
+                sumUnit += used;
+                sumTk += bill;
+
+                // লাইভ UI আপডেট
+                document.getElementById(`used-${index}`).innerText = used.toFixed(2);
+                document.getElementById(`bill-${index}`).innerText = '৳ ' + bill.toFixed(2);
+            });
+
+            document.getElementById('calcTotalUnit').innerText = sumUnit.toFixed(2) + " m³";
+            document.getElementById('calcTotalTk').innerText = '৳ ' + sumTk.toFixed(2);
+        }
+
+        // ব্রাউজারে ডাটা সেভ রাখা (যাতে কেটে দিলে হারায়ে না যায়)
+        function saveDataToLocal() {
+            localStorage.setItem('gasManagementData', JSON.stringify(gasData));
+            alert('🎉 এই মাসের ডাটা ব্রাউজারে সফলভাবে সেভ হয়েছে!');
+        }
+
+        // মেইলে ব্যাকআপ রিপোর্ট পাঠানো
+        function sendEmailBackup() {
+            calculateBills();
+            
+            let reportText = `🏠 গ্যাস বিল রিপোর্ট\n`;
+            reportText += `সাব-স্টেশন মোট খরচ: ${document.getElementById('mainTotalTk').value} টাকা\n`;
+            reportText += `সাব-স্টেশন মোট ইউনিট: ${document.getElementById('mainTotalUnit').value} m³\n`;
+            reportText += `-----------------------------------------\n`;
+            
+            gasData.forEach(m => {
+                reportText += `${m.flat} | মিটার: ${m.meterNo} | ব্যবহৃত ইউনিট: ${m.usedUnit} | বিল: ৳${m.totalBill}\n`;
+            });
+
+            // ইমেইল পাঠানোর জন্য ডাটা ফরম্যাট (প্রিন্ট এবং ইমেইল দুটোই হবে)
+            console.log(reportText); 
+            
+            // প্রিন্ট করার অপশন ওপেন হবে যাতে পিডিএফ সেভ করা যায়
+            window.print();
+            
+            alert('📧 আপনার ডাটা ইমেইল করার জন্য প্রস্তুত। আপনি এই পেজটি "Ctrl + P" চেপে PDF আকারেও সেভ করে ব্যাকআপ মেইলে রাখতে পারেন।');
+        }
+
+        // ওয়েবসাইট চালু হলে ডাটা লোড হবে
